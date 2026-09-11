@@ -28,4 +28,9 @@
     <ProjectReference Include="..\PROG7312POE.Api\PROG7312POE.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Intergration\" />
+    <Folder Include="Unit\" />
+  </ItemGroup>
+
 </Project>

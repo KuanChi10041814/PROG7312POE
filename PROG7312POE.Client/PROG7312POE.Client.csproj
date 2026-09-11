@@ -15,4 +15,8 @@
     <ProjectReference Include="..\PROG7312POE.Core\PROG7312POE.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Components\" />
+  </ItemGroup>
+
 </Project>
