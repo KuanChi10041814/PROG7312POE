@@ -23,4 +23,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PROG7312POE.Core\PROG7312POE.Core.csproj" />
+    <ProjectReference Include="..\PROG7312POE.Api\PROG7312POE.Api.csproj" />
+  </ItemGroup>
+
 </Project>
