@@ -1,5 +1,76 @@
-﻿<h3>RegisterSensor</h3>
+@page "/register-sensor"
+@inject SensorApiService SensorApi
+
+<PageTitle>Register Sensor</PageTitle>
+
+<section class="page-title-row">
+    <div>
+        <p class="eyebrow">Sensor payload management</p>
+        <h1>Register a Smart-X device</h1>
+    </div>
+    <a class="secondary-link" href="telemetry">View dashboard</a>
+</section>
+
+<div class="form-shell">
+    <EditForm Model="_request" OnSubmit="RegisterAsync">
+        <div class="form-grid">
+            <label>
+                Device name
+                <InputText class="form-control" @bind-Value="_request.DeviceName" placeholder="" />
+            </label>
+            <label>
+                MAC address or unique ID
+                <InputText class="form-control" @bind-Value="_request.MacAddress" placeholder="" />
+            </label>
+            <label>
+                Deployment path
+                <InputText class="form-control" @bind-Value="_request.DeploymentLocation" placeholder="" />
+            </label>
+            <label>
+                Category
+                <InputSelect class="form-control" @bind-Value="_request.Category">
+                    <option value="">Choose category</option>
+                    <option>Environmental</option>
+                    <option>Power Consumption</option>
+                    <option>Actuator</option>
+                </InputSelect>
+            </label>
+        </div>
+        <button class="primary-button" type="submit" disabled="@_isSaving">
+            @(_isSaving ? "Registering..." : "Register sensor")
+        </button>
+    </EditForm>
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <p class="status-message @(_isSuccess ? "success" : "error")">@_message</p>
+    }
+</div>
 
 @code {
+    private readonly SensorCreateRequest _request = new();
+    private bool _isSaving;
+    private bool _isSuccess;
+    private string? _message;
 
+    private async Task RegisterAsync()
+    {
+        _isSaving = true;
+        _message = null;
+
+        var created = await SensorApi.RegisterAsync(_request);
+        _isSaving = false;
+        _isSuccess = created is not null;
+        _message = created is null
+            ? "Sensor could not be registered. Check that all fields are complete and the MAC address is unique."
+            : $"Registered {created.DeviceName} in {created.DeploymentLocation}.";
+
+        if (created is not null)
+        {
+            _request.DeviceName = string.Empty;
+            _request.MacAddress = string.Empty;
+            _request.DeploymentLocation = string.Empty;
+            _request.Category = string.Empty;
+        }
+    }
 }

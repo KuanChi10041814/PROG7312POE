@@ -1,5 +1,231 @@
-﻿<h3>TelemetryDashboard</h3>
+@page "/telemetry"
+@inject SensorApiService SensorApi
+@inject TelemetryApiService TelemetryApi
+@inject AttachmentApiService AttachmentApi
+
+<PageTitle>Telemetry Dashboard</PageTitle>
+
+<section class="page-title-row">
+    <div>
+        <p class="eyebrow">Sensor data ingestion and telemetry</p>
+        <h1>Live gateway dashboard</h1>
+    </div>
+    <a class="secondary-link" href="register-sensor">Register sensor</a>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <p class="status-message @(_messageIsSuccess ? "success" : "error")">@_message</p>
+}
+
+<section class="dashboard-grid">
+    <article class="panel">
+        <h2>Telemetry simulator</h2>
+        <EditForm Model="_telemetryRequest" OnSubmit="SendTelemetryAsync">
+            <label>
+                Sensor
+                <InputSelect class="form-control" @bind-Value="_telemetryRequest.SensorId">
+                    <option value="0">Choose sensor</option>
+                    @foreach (var sensor in _sensors)
+                    {
+                        <option value="@sensor.Id">@sensor.DeviceName - @sensor.MacAddress</option>
+                    }
+                </InputSelect>
+            </label>
+            <label>
+                Metric
+                <InputText class="form-control" @bind-Value="_telemetryRequest.MetricName" placeholder="temperature, moisture, power-watts, valve-open" />
+            </label>
+            <label>
+                Value type
+                <InputSelect class="form-control" @bind-Value="_telemetryRequest.ValueType">
+                    <option value="double">Float / double</option>
+                    <option value="int">Integer</option>
+                    <option value="bool">Boolean</option>
+                    <option value="string">String</option>
+                </InputSelect>
+            </label>
+            <label>
+                Value
+                <InputText class="form-control" @bind-Value="_telemetryRequest.Value" placeholder="23.8, 1500, true" />
+            </label>
+            <button class="primary-button" type="submit">Push telemetry packet</button>
+        </EditForm>
+    </article>
+
+    <article class="panel engagement-panel">
+        <h2>Anomaly triage</h2>
+        <p class="focus-message">@_summary.FocusMessage</p>
+        <div class="metric-strip">
+            <div>
+                <span>@_summary.TotalPackets</span>
+                <small>packets</small>
+            </div>
+            <div>
+                <span>@_summary.AnomalyCount</span>
+                <small>recent anomalies</small>
+            </div>
+            <div>
+                <span>@_summary.OfflineSensorCount</span>
+                <small>attention states</small>
+            </div>
+        </div>
+        <ul class="prompt-list">
+            @foreach (var prompt in _summary.TroubleshootingPrompts)
+            {
+                <li>@prompt</li>
+            }
+        </ul>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel">
+        <h2>Registered sensors</h2>
+        <div class="sensor-list">
+            @foreach (var sensor in _sensors)
+            {
+                <button class="sensor-row @(sensor.Id == _selectedSensorId ? "selected" : "")" @onclick="() => SelectSensorAsync(sensor.Id)">
+                    <span>
+                        <strong>@sensor.DeviceName</strong>
+                        <small>@sensor.DeploymentLocation</small>
+                    </span>
+                    <span class="badge @sensor.Status.ToLowerInvariant().Replace(" ", "-")">@sensor.Status</span>
+                </button>
+            }
+        </div>
+    </article>
+
+    <article class="panel">
+        <h2>Configuration, photos, and logs</h2>
+        @if (_selectedSensorId == 0)
+        {
+            <p class="muted">Select a sensor to attach hardware logs, deployment photos, or configuration files.</p>
+        }
+        else
+        {
+            <InputFile OnChange="UploadAttachmentAsync" />
+            <ul class="attachment-list">
+                @foreach (var attachment in _attachments)
+                {
+                    <li>
+                        <span>@attachment.FileName</span>
+                        <small>@((attachment.SizeBytes / 1024.0).ToString("N1")) KB</small>
+                    </li>
+                }
+            </ul>
+        }
+    </article>
+</section>
+
+<section class="panel full-width-panel">
+    <h2>Recent telemetry packets</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time UTC</th>
+                    <th>Sensor</th>
+                    <th>Metric</th>
+                    <th>Type</th>
+                    <th>Value</th>
+                    <th>Severity</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var packet in _recentTelemetry)
+                {
+                    <tr class="@(packet.IsAnomaly ? "anomaly-row" : "")">
+                        <td>@packet.RecordedAtUtc.ToString("HH:mm:ss")</td>
+                        <td>@packet.SensorName</td>
+                        <td>@packet.MetricName</td>
+                        <td>@packet.ValueType</td>
+                        <td>@packet.RawValue</td>
+                        <td>@packet.Severity</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
 
 @code {
+    private readonly TelemetryCreateRequest _telemetryRequest = new()
+    {
+        ValueType = "double",
+        MetricName = "temperature"
+    };
 
+    private List<SensorResponse> _sensors = new();
+    private List<TelemetryResponse> _recentTelemetry = new();
+    private List<AttachmentResponse> _attachments = new();
+    private EngagementSummary _summary = new();
+    private int _selectedSensorId;
+    private string? _message;
+    private bool _messageIsSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _sensors = await SensorApi.GetSensorsAsync();
+        _recentTelemetry = await TelemetryApi.GetRecentAsync();
+        _summary = await TelemetryApi.GetEngagementSummaryAsync();
+
+        if (_selectedSensorId == 0 && _sensors.Count > 0)
+        {
+            _selectedSensorId = _sensors[0].Id;
+            _telemetryRequest.SensorId = _selectedSensorId;
+        }
+
+        if (_selectedSensorId != 0)
+        {
+            _attachments = await AttachmentApi.GetAttachmentsAsync(_selectedSensorId);
+        }
+    }
+
+    private async Task SendTelemetryAsync()
+    {
+        if (_telemetryRequest.SensorId == 0)
+        {
+            _messageIsSuccess = false;
+            _message = "Choose a sensor before pushing telemetry.";
+            return;
+        }
+
+        var result = await TelemetryApi.SendTelemetryAsync(_telemetryRequest);
+        _messageIsSuccess = result is not null;
+        _message = result is null
+            ? "Telemetry packet was rejected. Check the value matches the selected type."
+            : $"Packet accepted: {result.MetricName} = {result.RawValue} ({result.Severity}).";
+
+        await RefreshAsync();
+    }
+
+    private async Task SelectSensorAsync(int sensorId)
+    {
+        _selectedSensorId = sensorId;
+        _telemetryRequest.SensorId = sensorId;
+        _attachments = await AttachmentApi.GetAttachmentsAsync(sensorId);
+    }
+
+    private async Task UploadAttachmentAsync(InputFileChangeEventArgs args)
+    {
+        if (_selectedSensorId == 0)
+        {
+            return;
+        }
+
+        var uploaded = await AttachmentApi.UploadAsync(_selectedSensorId, args.File);
+        _messageIsSuccess = uploaded is not null;
+        _message = uploaded is null
+            ? "Upload failed. Try a smaller file or confirm the API is running."
+            : $"Attached {uploaded.FileName}.";
+
+        await SelectSensorAsync(_selectedSensorId);
+        _sensors = await SensorApi.GetSensorsAsync();
+    }
 }

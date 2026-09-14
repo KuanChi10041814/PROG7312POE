@@ -101,3 +101,272 @@ a, .btn-link {
 code {
     color: #c02d76;
 }
+
+.gateway-header,
+.page-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.gateway-header {
+    padding: 2rem;
+    border: 1px solid #d7dde8;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.eyebrow {
+    margin: 0 0 .35rem;
+    color: #526070;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.lede {
+    max-width: 64rem;
+    color: #485667;
+}
+
+.primary-link,
+.secondary-link,
+.primary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.5rem;
+    border-radius: 6px;
+    border: 1px solid #1f6f8b;
+    padding: .55rem .9rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.primary-link,
+.primary-button {
+    color: #fff;
+    background: #1f6f8b;
+}
+
+.secondary-link {
+    color: #1f6f8b;
+    background: #fff;
+}
+
+.pillar-grid,
+.dashboard-grid,
+.form-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.pillar-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 1rem;
+}
+
+.pillar-card,
+.panel,
+.form-shell {
+    border: 1px solid #d7dde8;
+    border-radius: 8px;
+    background: #fff;
+    padding: 1rem;
+}
+
+.pillar-card {
+    color: #1d2733;
+    text-decoration: none;
+}
+
+.pillar-card h2,
+.panel h2 {
+    margin-top: 0;
+    font-size: 1.15rem;
+}
+
+.pillar-state,
+.disabled-pill,
+.badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    border-radius: 999px;
+    padding: .2rem .55rem;
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+.pillar-state {
+    color: #365314;
+    background: #ecfccb;
+}
+
+.disabled-card,
+.nav-link.disabled {
+    opacity: .58;
+    cursor: not-allowed;
+}
+
+.disabled-pill {
+    color: #6b4e16;
+    background: #fef3c7;
+}
+
+.form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 1rem;
+}
+
+label {
+    display: grid;
+    gap: .35rem;
+    color: #334155;
+    font-weight: 700;
+}
+
+.form-control {
+    min-height: 2.45rem;
+}
+
+.status-message {
+    border-radius: 6px;
+    padding: .75rem .9rem;
+    font-weight: 700;
+}
+
+.status-message.success {
+    color: #14532d;
+    background: #dcfce7;
+}
+
+.status-message.error {
+    color: #7f1d1d;
+    background: #fee2e2;
+}
+
+.engagement-panel {
+    border-left: 6px solid #d97706;
+}
+
+.focus-message,
+.muted {
+    color: #526070;
+}
+
+.metric-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .75rem;
+    margin: 1rem 0;
+}
+
+.metric-strip div {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: .75rem;
+}
+
+.metric-strip span {
+    display: block;
+    color: #12303b;
+    font-size: 1.6rem;
+    font-weight: 800;
+}
+
+.metric-strip small,
+.sensor-row small,
+.attachment-list small {
+    color: #64748b;
+}
+
+.prompt-list,
+.attachment-list {
+    margin-bottom: 0;
+    padding-left: 1.25rem;
+}
+
+.sensor-list {
+    display: grid;
+    gap: .5rem;
+}
+
+.sensor-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    padding: .75rem;
+    text-align: left;
+}
+
+.sensor-row.selected {
+    border-color: #1f6f8b;
+    background: #eff6ff;
+}
+
+.badge {
+    color: #164e63;
+    background: #cffafe;
+}
+
+.badge.needs-attention {
+    color: #7f1d1d;
+    background: #fee2e2;
+}
+
+.full-width-panel {
+    margin-top: 1rem;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border-bottom: 1px solid #e2e8f0;
+    padding: .7rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    color: #334155;
+    background: #f8fafc;
+}
+
+.anomaly-row {
+    background: #fff7ed;
+}
+
+@media (max-width: 900px) {
+    .gateway-header,
+    .page-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .pillar-grid,
+    .dashboard-grid,
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
