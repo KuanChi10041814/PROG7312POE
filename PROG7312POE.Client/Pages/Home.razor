@@ -1,17 +1,51 @@
 @page "/"
+@inject SensorApiService SensorApi
 
-<PageTitle>Smart-X Gateway</PageTitle>
+<PageTitle>Overview | Smart-X</PageTitle>
 
-<section class="gateway-header">
-    <div>
-        <p class="eyebrow">Smart-X</p>
-        <h1>Home page</h1>
-        <p class="lede">
-        </p>
+<header class="page-title-row">
+    <div><h1>Overview</h1><p class="muted">Devices and their latest status.</p></div>
+    <a class="primary-link" href="register-sensor">Add device</a>
+</header>
+
+@if (_error is not null)
+{
+    <p class="status-message error" role="alert">@_error</p>
+}
+<section class="metric-strip" aria-label="Device totals">
+    <div><small>Total devices</small><span>@_sensors.Count</span></div>
+    <div><small>Online</small><span>@_sensors.Count(sensor => sensor.Status == "Online")</span></div>
+    <div><small>Needs attention</small><span>@_sensors.Count(sensor => sensor.Status != "Online")</span></div>
+</section>
+<section class="panel">
+    <div class="section-heading"><h2>Devices</h2><a href="telemetry">View readings</a></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Name</th><th>Location</th><th>Category</th><th>Status</th></tr></thead>
+            <tbody>
+                @foreach (var sensor in _sensors)
+                {
+                    <tr><td><a href="telemetry">@sensor.DeviceName</a><small class="device-id">@sensor.MacAddress</small></td><td>@sensor.DeploymentLocation</td><td>@sensor.Category</td><td><span class="badge @sensor.Status.ToLowerInvariant().Replace(" ", "-")">@sensor.Status</span></td></tr>
+                }
+                @if (_sensors.Count == 0)
+                {
+                    <tr><td colspan="4" class="empty-state">@(_loading ? "Loading devices..." : "No devices registered yet.")</td></tr>
+                }
+            </tbody>
+        </table>
     </div>
-    <a class="primary-link" href="telemetry">Open telemetry dashboard</a>
 </section>
+<div class="overview-links"><a href="telemetry">Telemetry</a><a href="command-stream">Commands and history</a><span class="muted">Mesh routing <small>Coming soon</small></span></div>
 
-<section class="pillar-grid" aria-label="Architecture pillars">
-    
-</section>
+@code {
+    private List<SensorResponse> _sensors = new();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _sensors = await SensorApi.GetSensorsAsync(); }
+        catch (HttpRequestException) { _error = "Devices could not be loaded. Check the server connection and refresh."; }
+        finally { _loading = false; }
+    }
+}

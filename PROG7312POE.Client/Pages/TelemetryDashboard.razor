@@ -7,8 +7,7 @@
 
 <section class="page-title-row">
     <div>
-        <p class="eyebrow">Sensor data ingestion and telemetry</p>
-        <h1>Live gateway dashboard</h1>
+        <h1>Telemetry</h1>
     </div>
     <a class="secondary-link" href="register-sensor">Register sensor</a>
 </section>
@@ -20,7 +19,7 @@
 
 <section class="dashboard-grid">
     <article class="panel">
-        <h2>Telemetry simulator</h2>
+        <h2>Add reading</h2>
         <EditForm Model="_telemetryRequest" OnSubmit="SendTelemetryAsync">
             <label>
                 Sensor
@@ -49,13 +48,13 @@
                 Value
                 <InputText class="form-control" @bind-Value="_telemetryRequest.Value" placeholder="23.8, 1500, true" />
             </label>
-            <button class="primary-button" type="submit">Push telemetry packet</button>
+            <button class="primary-button" type="submit">Send reading</button>
         </EditForm>
     </article>
 
     <article class="panel engagement-panel">
-        <h2>Anomaly triage</h2>
-        <p class="focus-message">@_summary.FocusMessage</p>
+        <h2>Sensor health</h2>
+        <p class="focus-message">@(_summary.AnomalyCount > 0 ? "Some readings need attention." : "No recent alerts.")</p>
         <div class="metric-strip">
             <div>
                 <span>@_summary.TotalPackets</span>
@@ -67,7 +66,7 @@
             </div>
             <div>
                 <span>@_summary.OfflineSensorCount</span>
-                <small>attention states</small>
+                <small>need attention</small>
             </div>
         </div>
         <ul class="prompt-list">
@@ -97,7 +96,7 @@
     </article>
 
     <article class="panel">
-        <h2>Configuration, photos, and logs</h2>
+        <h2>Attachments</h2>
         @if (_selectedSensorId == 0)
         {
             <p class="muted">Select a sensor to attach hardware logs, deployment photos, or configuration files.</p>
@@ -119,7 +118,7 @@
 </section>
 
 <section class="panel full-width-panel">
-    <h2>Recent telemetry packets</h2>
+    <h2>Reading history</h2>
     <div class="table-wrap">
         <table>
             <thead>

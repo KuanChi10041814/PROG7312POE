@@ -25,6 +25,9 @@ builder.Services.AddDbContext<SmartXDbContext>(options =>
 builder.Services.AddScoped<SensorService>();
 builder.Services.AddScoped<TelemetryService>();
 builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddScoped<CommandStreamService>();
+builder.Services.AddSingleton<TelemetryProcessor>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<TelemetryProcessor>());
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -32,6 +35,7 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<SmartXDbContext>();
     dbContext.Database.EnsureCreated();
     EnsurePartOneSchema(dbContext);
+    EnsurePartTwoSchema(dbContext);
 }
 
 // Configure the HTTP request pipeline.
@@ -127,4 +131,29 @@ static void AddColumnIfMissing(SmartXDbContext dbContext, string tableName, stri
 
     var sql = $"""ALTER TABLE "{tableName}" ADD COLUMN "{columnName}" {columnDefinition};""";
     dbContext.Database.ExecuteSqlRaw(sql);
+}
+
+static void EnsurePartTwoSchema(SmartXDbContext dbContext)
+{
+    dbContext.Database.ExecuteSqlRaw(
+        """
+        CREATE TABLE IF NOT EXISTS "CommandRecords" (
+            "Id" INTEGER NOT NULL CONSTRAINT "PK_CommandRecords" PRIMARY KEY AUTOINCREMENT,
+            "SensorId" INTEGER NOT NULL,
+            "CommandText" TEXT NOT NULL,
+            "CommandType" TEXT NOT NULL,
+            "IsUndo" INTEGER NOT NULL,
+            "CreatedAtUtc" TEXT NOT NULL,
+            CONSTRAINT "FK_CommandRecords_Sensors_SensorId" FOREIGN KEY ("SensorId") REFERENCES "Sensors" ("Id") ON DELETE CASCADE
+        );
+        """);
+
+    dbContext.Database.ExecuteSqlRaw(
+        """CREATE INDEX IF NOT EXISTS "IX_CommandRecords_CreatedAtUtc" ON "CommandRecords" ("CreatedAtUtc");""");
+    dbContext.Database.ExecuteSqlRaw(
+        """CREATE INDEX IF NOT EXISTS "IX_CommandRecords_SensorId" ON "CommandRecords" ("SensorId");""");
+    AddColumnIfMissing(dbContext, "Sensors", "ControlState", "TEXT NOT NULL DEFAULT 'Off'");
+    AddColumnIfMissing(dbContext, "CommandRecords", "IsUndone", "INTEGER NOT NULL DEFAULT 0");
+    AddColumnIfMissing(dbContext, "CommandRecords", "PreviousState", "TEXT NOT NULL DEFAULT 'Off'");
+    AddColumnIfMissing(dbContext, "CommandRecords", "ResultingState", "TEXT NOT NULL DEFAULT 'Off'");
 }

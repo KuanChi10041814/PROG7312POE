@@ -1,18 +1,288 @@
 @page "/command-stream"
+@inject CommandStreamApiService CommandApi
+@implements IAsyncDisposable
 
 <PageTitle>Command Stream</PageTitle>
 
 <section class="page-title-row">
     <div>
-        <p class="eyebrow">Disabled module</p>
-        <h1>Real-Time Command Stream and History</h1>
+        <h1>Commands</h1>
     </div>
-    <span class="disabled-pill">Part 2</span>
+    <button class="secondary-link" type="button" @onclick="RefreshAsync">Refresh</button>
 </section>
 
-<article class="panel">
-    <p class="muted">
-        This pillar is intentionally disabled for Part 1 and reserved for queue, priority queue,
-        stack-based command history, and predictive action implementation in Part 2.
-    </p>
-</article>
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <p class="status-message @(_messageIsSuccess ? "success" : "error")">@_message</p>
+}
+
+<section class="command-toolbar panel">
+    <label>
+        Search
+        <input class="form-control" @bind="_searchTerm" @bind:event="oninput" placeholder="Device, category or alert" />
+    </label>
+    <button class="primary-button" type="button" @onclick="SearchAsync">Apply filter</button>
+    <button class="secondary-link" type="button" @onclick="ClearSearchAsync">Clear</button>
+</section>
+
+<section class="metric-strip command-metrics">
+    <div>
+        <span>@_dashboard.StandardQueueCount</span>
+        <small>Recent readings</small>
+    </div>
+    <div>
+        <span>@_dashboard.CriticalQueueCount</span>
+        <small>Alerts</small>
+    </div>
+    <div>
+        <span>@_dashboard.CommandHistoryCount</span>
+        <small>Commands recorded</small>
+    </div>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel">
+        <h2>Send command</h2>
+        <EditForm Model="_commandRequest" OnSubmit="IssueCommandAsync">
+            <label>
+                Target device
+                <InputSelect class="form-control" @bind-Value="_commandRequest.SensorId">
+                    <option value="0">Choose sensor</option>
+                    @foreach (var device in _dashboard.Devices)
+                    {
+                        <option value="@device.Id">@device.DeviceName - @device.Category</option>
+                    }
+                </InputSelect>
+            </label>
+            <label>
+                Command
+                <InputText class="form-control" @bind-Value="_commandRequest.CommandText" placeholder="Start pump for 30 seconds" />
+            </label>
+            <label>
+                Type
+                <InputSelect class="form-control" @bind-Value="_commandRequest.CommandType">
+                    <option>Manual Override</option>
+                    <option>Relay Toggle</option>
+                    <option>Pump Control</option>
+                    <option>Diagnostic</option>
+                    <option>Suggested Action</option>
+                </InputSelect>
+            </label>
+            <div class="button-row">
+                <button class="primary-button" type="submit">Issue command</button>
+                <button class="secondary-link" type="button" @onclick="UndoAsync">Undo last</button>
+            </div>
+        </EditForm>
+    </article>
+
+    <article class="panel engagement-panel">
+        <h2>Suggested actions</h2>
+        @if (_dashboard.SuggestedActions.Count == 0)
+        {
+            <p class="muted">No suggested actions right now.</p>
+        }
+        <div class="suggestion-list">
+            @foreach (var suggestion in _dashboard.SuggestedActions)
+            {
+                <button class="suggestion-card" type="button" @onclick="() => UseSuggestion(suggestion)">
+                    <strong>@suggestion.Title</strong>
+                    <span>@suggestion.SensorName</span>
+                    <small>@suggestion.Reason</small>
+                </button>
+            }
+        </div>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel">
+        <h2>Alerts</h2>
+        @if (_dashboard.CriticalAlerts.Count == 0) { <p class="empty-state">No alerts found.</p> }
+        <div class="queue-list">
+            @foreach (var alert in _dashboard.CriticalAlerts)
+            {
+                <div class="queue-item alert">
+                    <span class="badge @alert.Severity.ToLowerInvariant()">@alert.Severity</span>
+                    <strong>@alert.SensorName</strong>
+                    <span>@alert.MetricName = @alert.RawValue</span>
+                    <small>@alert.RecordedAtUtc.ToString("HH:mm:ss") UTC</small>
+                </div>
+            }
+        </div>
+    </article>
+
+    <article class="panel">
+        <h2>Recent readings</h2>
+        @if (_dashboard.StandardTelemetryQueue.Count == 0) { <p class="empty-state">No readings found.</p> }
+        <div class="queue-list">
+            @foreach (var packet in _dashboard.StandardTelemetryQueue)
+            {
+                <div class="queue-item">
+                    <strong>@packet.SensorName</strong>
+                    <span>@packet.MetricName = @packet.RawValue</span>
+                    <small>@packet.RecordedAtUtc.ToString("HH:mm:ss") UTC</small>
+                </div>
+            }
+        </div>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel">
+        <h2>Device issues</h2>
+        @if (_dashboard.ActiveErrorStates.Count == 0) { <p class="empty-state">No device issues reported.</p> }
+        <ul class="prompt-list">
+            @foreach (var error in _dashboard.ActiveErrorStates)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </article>
+
+    <article class="panel">
+        <h2>Devices</h2>
+        @if (_dashboard.Devices.Count == 0) { <p class="empty-state">No matching devices.</p> }
+        <div class="sensor-list compact">
+            @foreach (var device in _dashboard.Devices)
+            {
+                <div class="sensor-row">
+                    <span>
+                        <strong>@device.DeviceName</strong>
+                        <small>@device.MacAddress | @device.Category | @device.ControlState</small>
+                    </span>
+                    <span class="badge @device.Status.ToLowerInvariant().Replace(" ", "-")">@device.Status</span>
+                </div>
+            }
+        </div>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel">
+        <h2>Command history</h2>
+        @if (_dashboard.CommandHistory.Count == 0) { <p class="empty-state">No commands sent yet.</p> }
+        <div class="queue-list">
+            @foreach (var command in _dashboard.CommandHistory)
+            {
+                <div class="queue-item @(command.IsUndo ? "undo" : "")">
+                    <strong>@command.CommandText</strong>
+                    <span>@command.SensorName - @command.CommandType - @command.ResultingState @(command.IsUndone ? "(undone)" : "")</span>
+                    <small>@command.CreatedAtUtc.ToString("HH:mm:ss") UTC</small>
+                </div>
+            }
+        </div>
+    </article>
+
+    <article class="panel">
+        <h2>Activity</h2>
+        @if (_dashboard.Timeline.Count == 0) { <p class="empty-state">No activity recorded.</p> }
+        <div class="timeline-list">
+            @foreach (var bucket in _dashboard.Timeline)
+            {
+                <div class="timeline-row">
+                    <strong>@bucket.TimestampUtc.ToString("HH:mm") UTC</strong>
+                    <span>@bucket.Packets.Count packet(s)</span>
+                </div>
+            }
+        </div>
+    </article>
+</section>
+
+@code {
+    private CommandStreamDashboard _dashboard = new();
+    private CommandCreateRequest _commandRequest = new();
+    private string? _searchTerm;
+    private string? _message;
+    private bool _messageIsSuccess;
+    private readonly CancellationTokenSource _stop = new();
+    private Task? _polling;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _commandRequest = CommandApi.Draft;
+        _searchTerm = CommandApi.SearchTerm;
+        await RefreshAsync();
+        _polling = PollAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        CommandApi.SearchTerm = _searchTerm;
+        try { _dashboard = await CommandApi.GetDashboardAsync(_searchTerm); }
+        catch (HttpRequestException)
+        {
+            _messageIsSuccess = false;
+            _message = "The server could not be reached. Retrying shortly.";
+            return;
+        }
+        if (_commandRequest.SensorId == 0 && _dashboard.Devices.Count > 0)
+        {
+            _commandRequest.SensorId = _dashboard.Devices[0].Id;
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task ClearSearchAsync()
+    {
+        _searchTerm = string.Empty;
+        await RefreshAsync();
+    }
+
+    private async Task IssueCommandAsync()
+    {
+        if (_commandRequest.SensorId == 0)
+        {
+            _messageIsSuccess = false;
+            _message = "Choose a target sensor first.";
+            return;
+        }
+
+        var command = await CommandApi.IssueCommandAsync(_commandRequest);
+        _messageIsSuccess = command is not null;
+        _message = command is null
+            ? "Command was rejected. Confirm the command text and selected device."
+            : $"Issued {command.CommandText} to {command.SensorName}.";
+
+        _commandRequest.CommandText = string.Empty;
+        await RefreshAsync();
+    }
+
+    private async Task UndoAsync()
+    {
+        var command = await CommandApi.UndoLastCommandAsync();
+        _messageIsSuccess = command is not null;
+        _message = command is null
+            ? "There is no command available to undo."
+            : $"Undo command created for {command.SensorName}.";
+        await RefreshAsync();
+    }
+
+    private void UseSuggestion(SuggestedAction suggestion)
+    {
+        _commandRequest.SensorId = suggestion.SensorId;
+        _commandRequest.CommandText = suggestion.CommandText;
+        _commandRequest.CommandType = "Suggested Action";
+    }
+
+    private async Task PollAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(_stop.Token))
+                await InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
+        }
+        catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _stop.Cancel();
+        if (_polling is not null) await _polling;
+        _stop.Dispose();
+    }
+}

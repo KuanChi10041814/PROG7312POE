@@ -14,9 +14,13 @@ public class Sensor
 
     public string Status { get; set; } = "Online";
 
+    public string ControlState { get; set; } = "Off";
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public List<TelemetryRecord> TelemetryRecords { get; set; } = new();
 
     public List<SensorAttachment> Attachments { get; set; } = new();
+
+    public List<CommandRecord> CommandRecords { get; set; } = new();
 }

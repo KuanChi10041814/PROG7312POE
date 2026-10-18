@@ -16,6 +16,8 @@ public class SmartXDbContext : DbContext
 
     public DbSet<SensorAttachment> SensorAttachments => Set<SensorAttachment>();
 
+    public DbSet<CommandRecord> CommandRecords => Set<CommandRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -55,6 +57,11 @@ public class SmartXDbContext : DbContext
             entity.HasMany(sensor => sensor.Attachments)
                 .WithOne(attachment => attachment.Sensor)
                 .HasForeignKey(attachment => attachment.SensorId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(sensor => sensor.CommandRecords)
+                .WithOne(command => command.Sensor)
+                .HasForeignKey(command => command.SensorId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -96,6 +103,21 @@ public class SmartXDbContext : DbContext
             entity.Property(attachment => attachment.StoredPath)
                 .IsRequired()
                 .HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<CommandRecord>(entity =>
+        {
+            entity.HasKey(command => command.Id);
+
+            entity.Property(command => command.CommandText)
+                .IsRequired()
+                .HasMaxLength(160);
+
+            entity.Property(command => command.CommandType)
+                .IsRequired()
+                .HasMaxLength(60);
+
+            entity.HasIndex(command => command.CreatedAtUtc);
         });
     }
 }

@@ -1,6 +1,6 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Smart-X Gateway</a>
+        <a class="navbar-brand" href="">Smart-X</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -11,18 +11,28 @@
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Overview
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="register-sensor">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Register Sensor
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Add device
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="telemetry">
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Telemetry
             </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="command-stream">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Commands
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <span class="nav-link disabled" aria-disabled="true" title="Coming soon">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Mesh Routing
+            </span>
         </div>
     </nav>
 </div>

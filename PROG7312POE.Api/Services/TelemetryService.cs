@@ -10,9 +10,12 @@ public class TelemetryService
 {
     private readonly SmartXDbContext _dbContext;
 
-    public TelemetryService(SmartXDbContext dbContext)
+    private readonly TelemetryProcessor _processor;
+
+    public TelemetryService(SmartXDbContext dbContext, TelemetryProcessor processor)
     {
         _dbContext = dbContext;
+        _processor = processor;
     }
 
     public async Task<List<TelemetryResponse>> GetRecentAsync(int take = 50)
@@ -26,6 +29,9 @@ public class TelemetryService
     }
 
     public async Task<(TelemetryResponse? Telemetry, string? Error)> AddTelemetryAsync(TelemetryCreateRequest request)
+        => await _processor.SubmitAsync(request);
+
+    public async Task<(TelemetryResponse? Telemetry, string? Error)> ProcessTelemetryAsync(TelemetryCreateRequest request)
     {
         var sensor = await _dbContext.Sensors.FindAsync(request.SensorId);
         if (sensor is null)
@@ -48,7 +54,15 @@ public class TelemetryService
         var batchBuffer = new TelemetryBatchBuffer(batchCount: 3, batchSize: 10);
         var stagedRecords = batchBuffer.Stage(record);
         _dbContext.TelemetryRecords.AddRange(stagedRecords);
-        sensor.Status = record.IsAnomaly ? "Needs attention" : "Online";
+        await _dbContext.SaveChangesAsync();
+        var latestMetrics = await _dbContext.TelemetryRecords.Where(item => item.SensorId == sensor.Id)
+            .OrderByDescending(item => item.Id).ToListAsync();
+        var currentMetrics = latestMetrics.GroupBy(item => item.MetricName.ToLowerInvariant())
+            .Select(group => group.First()).ToList();
+        sensor.Status = currentMetrics.Any(item => item.MetricName.Contains("connected", StringComparison.OrdinalIgnoreCase)
+                && item.RawValue.Equals("False", StringComparison.OrdinalIgnoreCase))
+            ? "Disconnected"
+            : currentMetrics.Any(item => item.IsAnomaly) ? "Needs attention" : "Online";
         await _dbContext.SaveChangesAsync();
 
         record.Sensor = sensor;

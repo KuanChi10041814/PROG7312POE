@@ -25,6 +25,8 @@ public sealed class SensorResponse
 
     public string Status { get; set; } = string.Empty;
 
+    public string ControlState { get; set; } = "Off";
+
     public DateTime CreatedAtUtc { get; set; }
 
     public int AttachmentCount { get; set; }

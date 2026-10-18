@@ -12,5 +12,6 @@ builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseUr
 builder.Services.AddScoped<SensorApiService>();
 builder.Services.AddScoped<TelemetryApiService>();
 builder.Services.AddScoped<AttachmentApiService>();
+builder.Services.AddScoped<CommandStreamApiService>();
 
 await builder.Build().RunAsync();
